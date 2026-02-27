@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recurring Delay Redirect | Auto-Click Scheduler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #050505;
+            overflow-x: hidden;
+        }
+        
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Animated Grid Background */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200vw;
+            height: 200vh;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+            animation: gridMove 20s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes gridMove {
+            0% { transform: perspective(500px) rotateX(60deg) translateY(0) translateZ(-200px); }
+            100% { transform: perspective(500px) rotateX(60deg) translateY(50px) translateZ(-200px); }
+        }
+
+        /* Floating Orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: -1;
+            animation: float 10s ease-in-out infinite;
+        }
+        .orb-1 { width: 400px; height: 400px; background: rgba(147, 51, 234, 0.2); top: -100px; left: -100px; animation-delay: 0s; }
+        .orb-2 { width: 300px; height: 300px; background: rgba(59, 130, 246, 0.2); bottom: -50px; right: -50px; animation-delay: -5s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(30px, -30px); }
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Progress Ring */
+        .progress-ring {
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.1s linear;
+            stroke-linecap: round;
+        }
+
+        /* Neon Glow */
+        .neon-text {
+            text-shadow: 0 0 10px rgba(167, 139, 250, 0.5), 0 0 20px rgba(167, 139, 250, 0.3);
+        }
+
+        /* Input Animation */
+        .input-group {
+            position: relative;
+        }
+        
+        .input-group input:focus ~ label,
+        .input-group input:not(:placeholder-shown) ~ label {
+            transform: translateY(-28px) scale(0.85);
+            color: #a78bfa;
+            background: #0a0a0a;
+            padding: 0 4px;
+        }
+
+        /* Custom Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #a78bfa;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+
+        /* Pulse Animation */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(167, 139, 250, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); }
+        }
+        
+        .pulse-active {
+            animation: pulse-ring 2s infinite;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            animation: blink 2s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Time Button Selection */
+        .time-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .time-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .time-btn:hover::before {
+            left: 100%;
+        }
+        .time-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px -10px rgba(167, 139, 250, 0.5);
+            border-color: rgba(167, 139, 250, 0.5);
+        }
+        .time-btn.active {
+            background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+            border-color: transparent;
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+        }
+
+        /* Log Entry */
+        .log-entry {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.3);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #a78bfa;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #a78bfa;
+        }
+        
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-grid"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-4xl relative z-10">
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-4">
+                <span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+                <span class="text-xs uppercase tracking-widest text-gray-400">Auto-Redirect System</span>
+            </div>
+            <h1 class="font-display text-4xl md:text-6xl font-bold mb-2 tracking-tight neon-text">
+                LOOP REDIRECT
+            </h1>
+            <p class="text-gray-400 text-lg">Schedule recurring automatic redirects</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
+            
+            <!-- Left Panel: Controls -->
+            <div class="md:col-span-2 space-y-6">
+                
+                <!-- Main Card -->
+                <div class="glass rounded-2xl p-6 md:p-8">
+                    
+                    <!-- Input Section -->
+                    <div id="inputSection" class="space-y-6">
+                        
+                        <!-- URL Input -->
+                        <div class="input-group">
+                            <input type="url" id="urlInput" placeholder=" " 
+                                class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-4 text-lg outline-none focus:border-purple-500/50 focus:bg-black/50 transition-all duration-300 text-white font-mono"
+                                value="https://">
+                            <label for="urlInput" class="absolute left-4 top-4 text-gray-400 transition-all duration-300 pointer-events-none text-sm">
+                                Target URL
+                            </label>
+                        </div>
+
+                        <!-- Interval Selection -->
+                        <div>
+                            <label class="text-xs uppercase tracking-widest text-gray-500 mb-3 block">Redirect Interval</label>
+                            <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                                <button onclick="setIntervalTime(30)" class="time-btn glass rounded-lg p-3 text-xs font-bold border border-white/5" data-seconds="30">
+                                    30s
+                                </button>
+                                <button onclick="setIntervalTime(60)" class="time-btn glass rounded-lg p-3 text-xs font-bold border border-white/5 active" data-seconds="60">
+                                    1m
+                                </button>
+                                <button onclick="setIntervalTime(300)" class="time-btn glass rounded-lg p-3 text-xs font-bold border border-white/5" data-seconds="300">
+                                    5m
+                                </button>
+                                <button onclick="setIntervalTime(600)" class="time-btn glass rounded-lg p-3 text-xs font-bold border border-white/5" data-seconds="600">
+                                    10m
+                                </button>
+                                <button onclick="setIntervalTime(1800)" class="time-btn glass rounded-lg p-3 text-xs font-bold border border-white/5" data-seconds="1800">
+                                    30m
+                                </button>
+                                <button onclick="setIntervalTime(3600)" class="time-btn glass rounded-lg p-3 text-xs font-bold border border-white/5" data-seconds="3600">
+                                    1h
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Custom Settings -->
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="input-group">
+                                <input type="number" id="customTime" placeholder=" " min="1" 
+                                    class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-purple-500/50 transition-all text-white">
+                                <label for="customTime" class="absolute left-4 top-3 text-gray-400 text-xs transition-all duration-300 pointer-events-none">
+                                    Custom Value
+                                </label>
+                            </div>
+                            <div class="flex gap-2">
+                                <select id="timeUnit" class="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-purple-500/50 text-white cursor-pointer text-sm">
+                                    <option value="seconds">Seconds</option>
+                                    <option value="minutes">Minutes</option>
+                                    <option value="hours">Hours</option>
+                                </select>
+                                <button onclick="setCustomInterval()" class="bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl px-4 transition-all font-medium text-sm">
+                                    Set
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Loop Settings -->
+                        <div class="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                            <div>
+                                <div class="font-medium text-sm">Repeat Mode</div>
+                                <div class="text-xs text-gray-400">Auto-restart timer after redirect</div>
+                            </div>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none">
+                                <input type="checkbox" id="loopToggle" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-700 appearance-none cursor-pointer transition-all duration-300 right-0 border-purple-500"/>
+                                <label for="loopToggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-purple-500 cursor-pointer"></label>
+                            </div>
+                        </div>
+
+                        <!-- Max Loops -->
+                        <div id="maxLoopsSection" class="input-group">
+                            <input type="number" id="maxLoops" placeholder=" " min="1" value="10"
+                                class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-purple-500/50 transition-all text-white">
+                            <label for="maxLoops" class="absolute left-4 top-3 text-gray-400 text-xs transition-all duration-300 pointer-events-none">
+                                Max Redirects (empty = infinite)
+                            </label>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex gap-3">
+                            <button onclick="startScheduler()" id="startBtn" 
+                                class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-purple-500/25">
+                                Start Loop
+                            </button>
+                            <button onclick="testRedirect()" 
+                                class="px-6 py-4 rounded-xl border border-white/20 hover:bg-white/10 transition-all font-medium text-sm">
+                                Test
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Timer Section -->
+                    <div id="timerSection" class="hidden space-y-6">
+                        
+                        <!-- Progress Circle -->
+                        <div class="flex justify-center">
+                            <div class="relative w-48 h-48">
+                                <svg class="w-full h-full progress-ring" viewBox="0 0 120 120">
+                                    <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6"/>
+                                    <circle id="progressCircle" cx="60" cy="60" r="54" fill="none" stroke="url(#gradient)" stroke-width="6" 
+                                        stroke-dasharray="339.292" stroke-dashoffset="0" class="progress-ring-circle"/>
+                                    <defs>
+                                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" style="stop-color:#a78bfa;stop-opacity:1" />
+                                            <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <div id="timeDisplay" class="font-mono text-4xl font-bold tabular-nums">00:00</div>
+                                    <div class="text-xs text-gray-400 mt-1 uppercase tracking-widest">Next Click</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status Info -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+                                <div class="text-2xl font-bold text-purple-400" id="loopCount">0</div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wider">Completed</div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-white/5 border border-white/10 text-center">
+                                <div class="text-2xl font-bold text-blue-400" id="remainingLoops">∞</div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wider">Remaining</div>
+                            </div>
+                        </div>
+
+                        <!-- Target Display -->
+                        <div class="p-4 rounded-xl bg-black/30 border border-white/10">
+                            <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Target</div>
+                            <div id="targetDisplay" class="font-mono text-sm text-purple-400 truncate"></div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="flex gap-3">
+                            <button onclick="triggerNow()" class="flex-1 bg-white/10 hover:bg-white/20 border border-white/20 py-3 rounded-xl font-medium transition-all">
+                                Trigger Now
+                            </button>
+                            <button onclick="pauseScheduler()" id="pauseBtn" class="flex-1 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-300 py-3 rounded-xl font-medium transition-all">
+                                Pause
+                            </button>
+                            <button onclick="stopScheduler()" class="flex-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 py-3 rounded-xl font-medium transition-all">
+                                Stop
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Paused State -->
+                    <div id="pausedSection" class="hidden text-center py-8">
+                        <div class="text-6xl mb-4">⏸️</div>
+                        <h3 class="text-xl font-bold mb-2">Paused</h3>
+                        <p class="text-gray-400 mb-6">Timer is paused. Resume to continue.</p>
+                        <button onclick="resumeScheduler()" class="bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-300 px-8 py-3 rounded-xl font-medium transition-all">
+                            Resume
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Warning -->
+                <div class="glass rounded-xl p-4 border-l-4 border-yellow-500/50 bg-yellow-500/5">
+                    <div class="flex items-start gap-3">
+                        <span class="text-yellow-500 text-xl">⚠️</span>
+                        <div>
+                            <h4 class="font-bold text-sm text-yellow-200 mb-1">Important Notice</h4>
+                            <p class="text-xs text-gray-400 leading-relaxed">
+                                This tool opens URLs in new tabs. Keep this page active for accurate timing. 
+                                Browser throttling may affect delays when tab is inactive.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Activity Log -->
+            <div class="md:col-span-1">
+                <div class="glass rounded-2xl p-6 h-full max-h-[600px] flex flex-col">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-sm uppercase tracking-widest text-gray-400">Activity Log</h3>
+                        <button onclick="clearLog()" class="text-xs text-gray-500 hover:text-white transition-colors">Clear</button>
+                    </div>
+                    
+                    <div id="activityLog" class="flex-1 overflow-y-auto space-y-2 font-mono text-xs">
+                        <div class="text-gray-500 text-center py-8 italic">No activity yet...</div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-white/10">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Status:</span>
+                            <span id="systemStatus" class="text-gray-400">Idle</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-8 text-gray-600 text-xs">
+            <p>Recurring Delay Redirect System • Optimized for Vercel Edge</p>
+        </div>
+    </div>
+
+    <script>
+        let countdownInterval;
+        let totalSeconds;
+        let remainingSeconds;
+        let targetUrl = '';
+        let isRunning = false;
+        let isPaused = false;
+        let loopCount = 0;
+        let maxLoops = null;
+        let loopEnabled = true;
+        let intervalTime = 60;
+
+        // Initialize
+        document.getElementById('loopToggle').addEventListener('change', function() {
+            loopEnabled = this.checked;
+            document.getElementById('maxLoopsSection').style.display = loopEnabled ? 'block' : 'none';
+        });
+
+        function setIntervalTime(seconds) {
+            intervalTime = seconds;
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(parseInt(btn.dataset.seconds) === seconds) {
+                    btn.classList.add('active');
+                }
+            });
+            document.getElementById('customTime').value = '';
+        }
+
+        function setCustomInterval() {
+            const value = parseInt(document.getElementById('customTime').value);
+            const unit = document.getElementById('timeUnit').value;
+            
+            if(!value || value < 1) {
+                shake(document.getElementById('customTime'));
+                return;
+            }
+            
+            let seconds = value;
+            if(unit === 'minutes') seconds *= 60;
+            if(unit === 'hours') seconds *= 3600;
+            
+            intervalTime = seconds;
+            
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        function validateUrl(url) {
+            if(!url || url === 'https://') return false;
+            try {
+                new URL(url);
+                return true;
+            } catch(e) {
+                try {
+                    new URL('https://' + url);
+                    return 'https://' + url;
+                } catch(e2) {
+                    return false;
+                }
+            }
+        }
+
+        function testRedirect() {
+            const url = document.getElementById('urlInput').value.trim();
+            const validUrl = validateUrl(url);
+            
+            if(!validUrl) {
+                shake(document.getElementById('urlInput'));
+                addLog('Invalid URL provided', 'error');
+                return;
+            }
+            
+            const openUrl = validUrl === true ? url : validUrl;
+            window.open(openUrl, '_blank');
+            addLog(`Test redirect: ${openUrl}`, 'info');
+        }
+
+        function startScheduler() {
+            const url = document.getElementById('urlInput').value.trim();
+            const validUrl = validateUrl(url);
+            
+            if(!validUrl) {
+                shake(document.getElementById('urlInput'));
+                addLog('Failed to start: Invalid URL', 'error');
+                return;
+            }
+            
+            targetUrl = validUrl === true ? url : validUrl;
+            loopEnabled = document.getElementById('loopToggle').checked;
+            
+            const maxLoopsInput = document.getElementById('maxLoops').value;
+            maxLoops = loopEnabled && maxLoopsInput ? parseInt(maxLoopsInput) : (loopEnabled ? null : 1);
+            
+            loopCount = 0;
+            isRunning = true;
+            isPaused = false;
+            
+            // Update UI
+            document.getElementById('inputSection').classList.add('hidden');
+            document.getElementById('timerSection').classList.remove('hidden');
+            document.getElementById('pausedSection').classList.add('hidden');
+            document.getElementById('targetDisplay').textContent = targetUrl;
+            document.getElementById('remainingLoops').textContent = maxLoops || '∞';
+            
+            addLog(`Scheduler started: ${formatTime(intervalTime)} interval`, 'success');
+            
+            startCountdown();
+        }
+
+        function startCountdown() {
+            totalSeconds = intervalTime;
+            remainingSeconds = totalSeconds;
+            updateDisplay();
+            
+            clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                if(!isPaused) {
+                    remainingSeconds--;
+                    updateDisplay();
+                    
+                    if(remainingSeconds <= 0) {
+                        executeRedirect();
+                    }
+                }
+            }, 1000);
+        }
+
+        function updateDisplay() {
+            const hours = Math.floor(remainingSeconds / 3600);
+            const minutes = Math.floor((remainingSeconds % 3600) / 60);
+            const seconds = remainingSeconds % 60;
+            
+            let timeString = '';
+            if(hours > 0) {
+                timeString = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+            
+            document.getElementById('timeDisplay').textContent = timeString;
+            
+            // Update progress ring
+            const circle = document.getElementById('progressCircle');
+            const circumference = 339.292;
+            const offset = circumference - (remainingSeconds / totalSeconds) * circumference;
+            circle.style.strokeDashoffset = offset;
+            
+            // Update title
+            document.title = `${timeString} | Loop Redirect`;
+        }
+
+        function executeRedirect() {
+            loopCount++;
+            
+            // Open URL
+            window.open(targetUrl, '_blank');
+            
+            addLog(`Redirect #${loopCount} executed`, 'success');
+            
+            // Update counters
+            document.getElementById('loopCount').textContent = loopCount;
+            if(maxLoops) {
+                const remaining = Math.max(0, maxLoops - loopCount);
+                document.getElementById('remainingLoops').textContent = remaining;
+                
+                if(loopCount >= maxLoops) {
+                    completeScheduler();
+                    return;
+                }
+            }
+            
+            // Restart countdown
+            if(loopEnabled) {
+                addLog(`Restarting timer: ${formatTime(intervalTime)}`, 'info');
+                startCountdown();
+            } else {
+                completeScheduler();
+            }
+        }
+
+        function triggerNow() {
+            clearInterval(countdownInterval);
+            executeRedirect();
+        }
+
+        function pauseScheduler() {
+            isPaused = true;
+            document.getElementById('timerSection').classList.add('hidden');
+            document.getElementById('pausedSection').classList.remove('hidden');
+            addLog('Scheduler paused', 'warning');
+            document.getElementById('systemStatus').textContent = 'Paused';
+            document.getElementById('systemStatus').className = 'text-yellow-400';
+        }
+
+        function resumeScheduler() {
+            isPaused = false;
+            document.getElementById('pausedSection').classList.add('hidden');
+            document.getElementById('timerSection').classList.remove('hidden');
+            addLog('Scheduler resumed', 'info');
+            document.getElementById('systemStatus').textContent = 'Running';
+            document.getElementById('systemStatus').className = 'text-green-400';
+        }
+
+        function stopScheduler() {
+            clearInterval(countdownInterval);
+            isRunning = false;
+            isPaused = false;
+            
+            document.getElementById('timerSection').classList.add('hidden');
+            document.getElementById('pausedSection').classList.add('hidden');
+            document.getElementById('inputSection').classList.remove('hidden');
+            
+            // Reset display
+            document.getElementById('progressCircle').style.strokeDashoffset = 0;
+            document.title = 'Recurring Delay Redirect | Auto-Click Scheduler';
+            
+            addLog('Scheduler stopped by user', 'error');
+            document.getElementById('systemStatus').textContent = 'Stopped';
+            document.getElementById('systemStatus').className = 'text-red-400';
+        }
+
+        function completeScheduler() {
+            clearInterval(countdownInterval);
+            isRunning = false;
+            
+            addLog('Scheduler completed: All redirects finished', 'success');
+            
+            setTimeout(() => {
+                stopScheduler();
+            }, 2000);
+        }
+
+        function addLog(message, type) {
+            const log = document.getElementById('activityLog');
+            const time = new Date().toLocaleTimeString();
+            
+            // Remove "No activity" message if present
+            if(log.children.length === 1 && log.children[0].classList.contains('text-center')) {
+                log.innerHTML = '';
+            }
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry flex items-start gap-2 p-2 rounded bg-white/5 border border-white/5';
+            
+            let colorClass = 'text-gray-400';
+            let icon = '•';
+            
+            if(type === 'success') { colorClass = 'text-green-400'; icon = '✓'; }
+            if(type === 'error') { colorClass = 'text-red-400'; icon = '✗'; }
+            if(type === 'warning') { colorClass = 'text-yellow-400'; icon = '!'; }
+            if(type === 'info') { colorClass = 'text-blue-400'; icon = 'i'; }
+            
+            entry.innerHTML = `
+                <span class="${colorClass} font-bold">${icon}</span>
+                <div class="flex-1">
+                    <div class="text-gray-300">${message}</div>
+                    <div class="text-gray-600 text-[10px]">${time}</div>
+                </div>
+            `;
+            
+            log.insertBefore(entry, log.firstChild);
+            
+            // Keep only last 50 entries
+            while(log.children.length > 50) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('activityLog').innerHTML = '<div class="text-gray-500 text-center py-8 italic">No activity yet...</div>';
+        }
+
+        function formatTime(seconds) {
+            if(seconds < 60) return `${seconds}s`;
+            if(seconds < 3600) return `${Math.floor(seconds/60)}m`;
+            return `${Math.floor(seconds/3600)}h ${Math.floor((seconds%3600)/60)}m`;
+        }
+
+        function shake(element) {
+            element.classList.add('shake');
+            setTimeout(() => element.classList.remove('shake'), 500);
+        }
+
+        // Warn before leaving if running
+        window.onbeforeunload = function() {
+            if(isRunning) {
+                return "Scheduler is running. Are you sure you want to leave?";
+            }
+        };
+
+        // Update status display
+        setInterval(() => {
+            const status = document.getElementById('systemStatus');
+            if(isRunning && !isPaused) {
+                status.textContent = 'Running';
+                status.className = 'text-green-400 status-badge';
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
